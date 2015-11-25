@@ -54,7 +54,8 @@
     <Compile Include="DDLManager.cs" />
     <Compile Include="ExcelStreamReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RowBuffer.cs" />
+    <Compile Include="BufferReader.cs" />
+    <Compile Include="SharedStringCache.cs" />
     <Compile Include="SheetOperator.cs" />
   </ItemGroup>
   <ItemGroup>

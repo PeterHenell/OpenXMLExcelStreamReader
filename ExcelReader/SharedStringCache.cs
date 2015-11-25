@@ -21,7 +21,7 @@ namespace ExcelReaderTest
             this._currentSharedStringIndex = 0;
         }
 
-        private void ReadSharedStringsUpTo(int shindex)
+        private void HeatCacheUpTo(int shindex)
         {
             while (_currentSharedStringIndex <= shindex)
             {
@@ -36,6 +36,16 @@ namespace ExcelReaderTest
             {
                 _sharedStringEnumerator.Dispose();
             }
+        }
+
+        public SharedStringItem Get(int requestedIndex)
+        {
+            if (_currentSharedStringIndex <= requestedIndex)
+            {
+                HeatCacheUpTo(requestedIndex);
+
+            }
+            return _sharedStrings[requestedIndex];
         }
     }
 }

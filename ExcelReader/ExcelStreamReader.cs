@@ -54,21 +54,19 @@ namespace ExcelReaderTest
 
         public void ForEachSheet(Action<SheetOperator> action)
         {
-            var sharedStringCache = new SharedStringCache(workbookPart);
-
-            foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
+            using (var sharedStringCache = new SharedStringCache(workbookPart))
             {
-                var currentSheet = GetCurrentSheet(worksheetPart);
-
-                //Console.WriteLine(currentSheet.Name);
-
-                using (OpenXmlReader reader = OpenXmlReader.Create(worksheetPart))
+                foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
                 {
+                    var currentSheet = GetCurrentSheet(worksheetPart);
+
+                    using (OpenXmlReader reader = OpenXmlReader.Create(worksheetPart))
                     using (SheetOperator sheetOperator = new SheetOperator(workbookPart, reader, currentSheet, sharedStringCache))
                     {
                         action(sheetOperator);
                     }
                 }
+
             }
         }
 

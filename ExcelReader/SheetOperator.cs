@@ -17,12 +17,8 @@ namespace ExcelReaderTest
         private DataTable _schema;
         private DataRow _currentRow;
         private SharedStringCache _sharedStringCache;
-        //private bool _started;
-        //private BufferReader<DataRow> _rowBuffer;
-        //private SharedStringItem[] _sharedStrings;
-        //private int _currentSharedStringIndex;
-        //private IEnumerator<SharedStringItem> _sharedStringEnumerator;
-
+        private bool _started;
+        private BufferReader<DataRow> _rowBuffer;
 
         public SheetOperator(WorkbookPart workbookPart, OpenXmlReader reader, Sheet currentSheet, SharedStringCache sharedStringCache)
         {
@@ -30,15 +26,11 @@ namespace ExcelReaderTest
             this._reader = reader;
             this._currentSheet = currentSheet;
             this._sharedStringCache = sharedStringCache;
-            //this._rowBuffer = new BufferReader<DataRow>();
-            //this._sharedStrings = new SharedStringItem[_workbookPart.SharedStringTablePart.SharedStringTable.Count];
-            //this._sharedStringEnumerator = _workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().GetEnumerator();
-            //this._currentSharedStringIndex = 0;
+            this._rowBuffer = new BufferReader<DataRow>();
         }
 
         public void ForEachRow(Action<DataTable, DataRow> forEachRow)
         {
-
             while (_reader.Read())
             {
                 if (_reader.ElementType == typeof(Row))
@@ -120,21 +112,9 @@ namespace ExcelReaderTest
             string cellValue;
             if (c.DataType != null && c.DataType == CellValues.SharedString)
             {
-                //SharedStringItem ssi = _workbookPart.SharedStringTablePart.
-                //    SharedStringTable.Elements<SharedStringItem>().ElementAt
-                //    (int.Parse(c.CellValue.InnerText));
-                //var enumerator = 
-
                 var shindex = int.Parse(c.CellValue.InnerText);
-                //if (_currentSharedStringIndex <= shindex)
-                //{
-                //    ReadSharedStringsUpTo(shindex);
-
-                //}
-                //SharedStringItem ssi = _sharedStrings[shindex];
                 SharedStringItem ssi = _sharedStringCache.Get(shindex);
                 cellValue = ssi.Text.Text;
-
             }
             else
             {
@@ -142,15 +122,6 @@ namespace ExcelReaderTest
             }
             return cellValue;
         }
-
-        //private void ReadSharedStringsUpTo(int shindex)
-        //{
-        //    while (_currentSharedStringIndex <= shindex)
-        //    {
-        //        _sharedStringEnumerator.MoveNext();
-        //        _sharedStrings[_currentSharedStringIndex++] = _sharedStringEnumerator.Current;
-        //    }
-        //}
 
         /// <summary>
         /// Creates schema from first row(or any row, this method does not care)
@@ -194,7 +165,6 @@ namespace ExcelReaderTest
             {
                 _schema.Dispose();
             }
-           
         }
 
         public void Close()
@@ -202,32 +172,31 @@ namespace ExcelReaderTest
 
         }
 
-
-
         private bool MoveNext()
         {
-            //if (!_started)
-            //{
-            //    _rowBuffer.BeginRead(GetRows());
-            //    _started = true;
-            //}
-            //_currentRow = _rowBuffer.Pop();
-
-            //if (null != _currentRow)
-            //{
-            //    return true;
-            //}
-            //return false;
-            while (_reader.Read())
+            if (!_started)
             {
-                if (_reader.ElementType == typeof(Row))
-                {
-                    DataRow dataRow = ProcessOneRow();
-                    _currentRow = dataRow;
-                    return true;
-                }
+                _rowBuffer.BeginRead(GetRows());
+                _started = true;
+            }
+            _currentRow = _rowBuffer.Pop();
+
+            if (null != _currentRow)
+            {
+                return true;
             }
             return false;
+
+            //while (_reader.Read())
+            //{
+            //    if (_reader.ElementType == typeof(Row))
+            //    {
+            //        DataRow dataRow = ProcessOneRow();
+            //        _currentRow = dataRow;
+            //        return true;
+            //    }
+            //}
+            //return false;
         }
 
         public int Depth
@@ -385,9 +354,6 @@ namespace ExcelReaderTest
         {
             return _currentRow[ordinal] == null;
         }
-
-
-
 
         public object this[string name]
         {
