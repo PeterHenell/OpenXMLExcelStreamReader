@@ -54,6 +54,8 @@ namespace ExcelReaderTest
 
         public void ForEachSheet(Action<SheetOperator> action)
         {
+            var sharedStringCache = new SharedStringCache(workbookPart);
+
             foreach (WorksheetPart worksheetPart in workbookPart.WorksheetParts)
             {
                 var currentSheet = GetCurrentSheet(worksheetPart);
@@ -62,7 +64,7 @@ namespace ExcelReaderTest
 
                 using (OpenXmlReader reader = OpenXmlReader.Create(worksheetPart))
                 {
-                    using (SheetOperator sheetOperator = new SheetOperator(workbookPart, reader, currentSheet))
+                    using (SheetOperator sheetOperator = new SheetOperator(workbookPart, reader, currentSheet, sharedStringCache))
                     {
                         action(sheetOperator);
                     }

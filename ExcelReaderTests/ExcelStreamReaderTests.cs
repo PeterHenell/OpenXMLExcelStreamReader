@@ -59,6 +59,8 @@ namespace ExcelReaderTest
             var ddlManager = new DDLManager();
             var bulkdInsertManager = new BulkInsertManager();
             String connString = GetConnectionString();
+            Console.WriteLine("Start time" + DateTime.Now);
+            
             ExcelStreamReader.Execute(fileName, reader =>
 
                 reader.ForEachSheet(sheet =>
@@ -69,6 +71,8 @@ namespace ExcelReaderTest
                     bulkdInsertManager.BulkInsertTo(schema, schema.TableName, sheet, connString);
                 })
             );
+            
+            Console.WriteLine("End time" + DateTime.Now);
         }
 
         private string GetConnectionString()

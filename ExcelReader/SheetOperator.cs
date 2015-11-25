@@ -16,18 +16,29 @@ namespace ExcelReaderTest
         private Sheet _currentSheet;
         private DataTable _schema;
         private DataRow _currentRow;
-        private bool _started;
+        private SharedStringCache _sharedStringCache;
+        //private bool _started;
+        //private BufferReader<DataRow> _rowBuffer;
+        //private SharedStringItem[] _sharedStrings;
+        //private int _currentSharedStringIndex;
+        //private IEnumerator<SharedStringItem> _sharedStringEnumerator;
 
 
-        public SheetOperator(WorkbookPart workbookPart, OpenXmlReader reader, Sheet currentSheet)
+        public SheetOperator(WorkbookPart workbookPart, OpenXmlReader reader, Sheet currentSheet, SharedStringCache sharedStringCache)
         {
             this._workbookPart = workbookPart;
             this._reader = reader;
             this._currentSheet = currentSheet;
+            this._sharedStringCache = sharedStringCache;
+            //this._rowBuffer = new BufferReader<DataRow>();
+            //this._sharedStrings = new SharedStringItem[_workbookPart.SharedStringTablePart.SharedStringTable.Count];
+            //this._sharedStringEnumerator = _workbookPart.SharedStringTablePart.SharedStringTable.Elements<SharedStringItem>().GetEnumerator();
+            //this._currentSharedStringIndex = 0;
         }
 
         public void ForEachRow(Action<DataTable, DataRow> forEachRow)
         {
+
             while (_reader.Read())
             {
                 if (_reader.ElementType == typeof(Row))
@@ -94,18 +105,7 @@ namespace ExcelReaderTest
                 if (_reader.ElementType == typeof(Cell))
                 {
                     Cell c = (Cell)_reader.LoadCurrentElement();
-                    string cellValue;
-                    if (c.DataType != null && c.DataType == CellValues.SharedString)
-                    {
-                        SharedStringItem ssi = _workbookPart.SharedStringTablePart.
-                            SharedStringTable.Elements<SharedStringItem>().ElementAt
-                            (int.Parse(c.CellValue.InnerText));
-                        cellValue = ssi.Text.Text;
-                    }
-                    else
-                    {
-                        cellValue = c.CellValue.InnerText;
-                    }
+                    string cellValue = GetCellValue(c);
 
                     dataRow[colCount++] = cellValue;
                 }
@@ -114,6 +114,43 @@ namespace ExcelReaderTest
 
             return dataRow;
         }
+
+        private string GetCellValue(Cell c)
+        {
+            string cellValue;
+            if (c.DataType != null && c.DataType == CellValues.SharedString)
+            {
+                //SharedStringItem ssi = _workbookPart.SharedStringTablePart.
+                //    SharedStringTable.Elements<SharedStringItem>().ElementAt
+                //    (int.Parse(c.CellValue.InnerText));
+                //var enumerator = 
+
+                var shindex = int.Parse(c.CellValue.InnerText);
+                //if (_currentSharedStringIndex <= shindex)
+                //{
+                //    ReadSharedStringsUpTo(shindex);
+
+                //}
+                //SharedStringItem ssi = _sharedStrings[shindex];
+                SharedStringItem ssi = _sharedStringCache.Get(shindex);
+                cellValue = ssi.Text.Text;
+
+            }
+            else
+            {
+                cellValue = c.CellValue.InnerText;
+            }
+            return cellValue;
+        }
+
+        //private void ReadSharedStringsUpTo(int shindex)
+        //{
+        //    while (_currentSharedStringIndex <= shindex)
+        //    {
+        //        _sharedStringEnumerator.MoveNext();
+        //        _sharedStrings[_currentSharedStringIndex++] = _sharedStringEnumerator.Current;
+        //    }
+        //}
 
         /// <summary>
         /// Creates schema from first row(or any row, this method does not care)
@@ -126,6 +163,7 @@ namespace ExcelReaderTest
 
             _schema = new DataTable(_currentSheet.Name);
             _reader.ReadFirstChild();
+            var colCount = 0;
             do
             {
                 if (_reader.ElementType == typeof(Cell))
@@ -141,9 +179,10 @@ namespace ExcelReaderTest
                     }
                     else
                     {
-                        cellValue = c.CellValue.InnerText;
+                        cellValue = c.CellValue != null ? c.CellValue.InnerText : "Column" + colCount;
                     }
                     _schema.Columns.Add(cellValue, typeof(string));
+                    colCount++;
                 }
 
             } while (_reader.ReadNextSibling());
@@ -155,6 +194,7 @@ namespace ExcelReaderTest
             {
                 _schema.Dispose();
             }
+           
         }
 
         public void Close()
@@ -168,14 +208,16 @@ namespace ExcelReaderTest
         {
             //if (!_started)
             //{
-            //    StartReader();
+            //    _rowBuffer.BeginRead(GetRows());
             //    _started = true;
             //}
+            //_currentRow = _rowBuffer.Pop();
 
-            // read into memory 100 rows, in another thread. Keep a list of rows cached.
-
-            // here wait until there is some row to process
-
+            //if (null != _currentRow)
+            //{
+            //    return true;
+            //}
+            //return false;
             while (_reader.Read())
             {
                 if (_reader.ElementType == typeof(Row))
