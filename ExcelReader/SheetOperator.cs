@@ -17,8 +17,6 @@ namespace ExcelReaderTest
         private DataTable _schema;
         private DataRow _currentRow;
         private SharedStringCache _sharedStringCache;
-        private bool _started;
-        private BufferReader<DataRow> _rowBuffer;
 
         public SheetOperator(WorkbookPart workbookPart, OpenXmlReader reader, Sheet currentSheet, SharedStringCache sharedStringCache)
         {
@@ -26,7 +24,6 @@ namespace ExcelReaderTest
             this._reader = reader;
             this._currentSheet = currentSheet;
             this._sharedStringCache = sharedStringCache;
-            this._rowBuffer = new BufferReader<DataRow>();
         }
 
         public void ForEachRow(Action<DataTable, DataRow> forEachRow)
@@ -43,7 +40,6 @@ namespace ExcelReaderTest
                     else
                     {
                         CreateSchema();
-
                     }
                 }
             }
@@ -97,7 +93,7 @@ namespace ExcelReaderTest
                 if (_reader.ElementType == typeof(Cell))
                 {
                     Cell c = (Cell)_reader.LoadCurrentElement();
-                    string cellValue = GetCellValue(c);
+                    string cellValue = GetCellValue(c, "");
 
                     dataRow[colCount++] = cellValue;
                 }
@@ -107,7 +103,7 @@ namespace ExcelReaderTest
             return dataRow;
         }
 
-        private string GetCellValue(Cell c)
+        private string GetCellValue(Cell c, string defaultValue)
         {
             string cellValue;
             if (c.DataType != null && c.DataType == CellValues.SharedString)
@@ -118,7 +114,7 @@ namespace ExcelReaderTest
             }
             else
             {
-                cellValue = c.CellValue.InnerText;
+                cellValue = c.CellValue != null ? c.CellValue.InnerText : defaultValue;
             }
             return cellValue;
         }
@@ -140,18 +136,8 @@ namespace ExcelReaderTest
                 if (_reader.ElementType == typeof(Cell))
                 {
                     Cell c = (Cell)_reader.LoadCurrentElement();
-                    string cellValue;
-                    if (c.DataType != null && c.DataType == CellValues.SharedString)
-                    {
-                        SharedStringItem ssi = _workbookPart.SharedStringTablePart.
-                            SharedStringTable.Elements<SharedStringItem>().ElementAt
-                            (int.Parse(c.CellValue.InnerText));
-                        cellValue = ssi.Text.Text;
-                    }
-                    else
-                    {
-                        cellValue = c.CellValue != null ? c.CellValue.InnerText : "Column" + colCount;
-                    }
+                    string cellValue = GetCellValue(c, "Column" + colCount);
+                    
                     _schema.Columns.Add(cellValue, typeof(string));
                     colCount++;
                 }
@@ -174,29 +160,16 @@ namespace ExcelReaderTest
 
         private bool MoveNext()
         {
-            if (!_started)
+            while (_reader.Read())
             {
-                _rowBuffer.BeginRead(GetRows());
-                _started = true;
-            }
-            _currentRow = _rowBuffer.Pop();
-
-            if (null != _currentRow)
-            {
-                return true;
+                if (_reader.ElementType == typeof(Row))
+                {
+                    DataRow dataRow = ProcessOneRow();
+                    _currentRow = dataRow;
+                    return true;
+                }
             }
             return false;
-
-            //while (_reader.Read())
-            //{
-            //    if (_reader.ElementType == typeof(Row))
-            //    {
-            //        DataRow dataRow = ProcessOneRow();
-            //        _currentRow = dataRow;
-            //        return true;
-            //    }
-            //}
-            //return false;
         }
 
         public int Depth
@@ -217,7 +190,6 @@ namespace ExcelReaderTest
         public bool NextResult()
         {
             return MoveNext();
-
         }
 
         public bool Read()
@@ -334,7 +306,6 @@ namespace ExcelReaderTest
 
         public object GetValue(int ordinal)
         {
-            //return GetFieldValue<object>(ordinal);
             return _currentRow[ordinal];
         }
 
@@ -348,7 +319,6 @@ namespace ExcelReaderTest
         {
             get { return _schema != null; }
         }
-
 
         public bool IsDBNull(int ordinal)
         {
